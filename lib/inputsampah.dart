@@ -20,11 +20,17 @@ class _InputSampahPageState extends State<InputSampahPage> {
   String? kategori;
 
   final List<String> kategoriList = [
-    'Plastik',
-    'Kertas',
-    'Logam',
-    'Kaca',
-    'Organik',
+    "Sampah Makanan",
+    "Sampah Taman",
+    "Kayu",
+    "Kertas Karton dan Kardus",
+    "Plastik - Lembaran",
+    "Plastik - Kerasan",
+    "Logam",
+    "Kain dan Produk Tekstil",
+    "Karet dan Kulit",
+    "Kaca",
+    "Sampah B3",
   ];
 
   bool isLoading = false;
