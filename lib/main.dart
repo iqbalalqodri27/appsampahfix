@@ -129,7 +129,7 @@ class _MyAppState extends State<MyApp> {
               await FirebaseAuth.instance.signOut();
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
+                MaterialPageRoute(builder: (context) => LoginRegisterPage()),
               );
             },
           ),
@@ -141,8 +141,10 @@ class _MyAppState extends State<MyApp> {
         onTap: _onItemTapped,
         backgroundColor: Colors.grey[300],
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.input), label: "Input"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "List"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.input), label: "Form Input Sampah"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.list), label: "List Data Sampah"),
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: "Dashboard",

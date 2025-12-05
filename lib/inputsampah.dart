@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InputSampahPage extends StatefulWidget {
   final String userId;
-
   const InputSampahPage({super.key, required this.userId});
 
   @override
@@ -11,140 +11,71 @@ class InputSampahPage extends StatefulWidget {
 }
 
 class _InputSampahPageState extends State<InputSampahPage> {
-  final _formKey = GlobalKey<FormState>();
+  final nisnC = TextEditingController();
+  final namaC = TextEditingController();
+  final kelasC = TextEditingController();
+  final namaSampahC = TextEditingController();
 
-  final TextEditingController nisnController = TextEditingController();
-  final TextEditingController namaController = TextEditingController();
-  final TextEditingController kelasController = TextEditingController();
-  final TextEditingController namaSampahController = TextEditingController();
-
-  String? kategoriSampah;
+  String kategori = "Plastik";
 
   final List<String> kategoriList = [
-    'Sampah Makanan',
-    'Sampah Taman',
-    'Kayu',
-    'Kertas & Kardus',
-    'Plastik Lembaran',
-    'Plastik Keras',
-    'Logam',
-    'Kain & Tekstil',
-    'Karet & Kulit',
-    'Kaca',
-    'Sampah B3',
+    "Plastik",
+    "Kertas",
+    "Logam",
+    "Kaca",
+    "Makanan"
   ];
 
-  // ✅ SIMPAN KE FIRESTORE
-  Future<void> simpanData() async {
-    if (_formKey.currentState!.validate()) {
-      await FirebaseFirestore.instance.collection("sampah").add({
-        'user_id': widget.userId,
-        'nisn': nisnController.text,
-        'nama': namaController.text,
-        'kelas': kelasController.text,
-        'kategori': kategoriSampah,
-        'nama_sampah': namaSampahController.text,
-        'waktu': Timestamp.now(),
-      });
+  Future simpanData() async {
+    await FirebaseFirestore.instance.collection('sampah').add({
+      'user_id': widget.userId,
+      'nisn': nisnC.text,
+      'nama': namaC.text,
+      'kelas': kelasC.text,
+      'kategori': kategori,
+      'nama_sampah': namaSampahC.text,
+      'waktu': DateTime.now(),
+    });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Data berhasil disimpan ✅")),
-      );
+    nisnC.clear();
+    namaC.clear();
+    kelasC.clear();
+    namaSampahC.clear();
 
-      nisnController.clear();
-      namaController.clear();
-      kelasController.clear();
-      namaSampahController.clear();
-
-      setState(() {
-        kategoriSampah = null;
-      });
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Data berhasil disimpan")),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Form Input Sampah")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: nisnController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "NISN",
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value!.isEmpty ? "NISN wajib diisi" : null,
-              ),
-              SizedBox(height: 12),
-              TextFormField(
-                controller: namaController,
-                decoration: InputDecoration(
-                  labelText: "Nama",
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value!.isEmpty ? "Nama wajib diisi" : null,
-              ),
-              SizedBox(height: 12),
-              TextFormField(
-                controller: kelasController,
-                decoration: InputDecoration(
-                  labelText: "Kelas",
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value!.isEmpty ? "Kelas wajib diisi" : null,
-              ),
-              SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: kategoriSampah,
-                hint: Text("Pilih Kategori Sampah"),
-                items: kategoriList.map((kategori) {
-                  return DropdownMenuItem(
-                    value: kategori,
-                    child: Text(kategori),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    kategoriSampah = value;
-                  });
-                },
-                validator: (value) =>
-                    value == null ? "Kategori wajib dipilih" : null,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 12),
-              TextFormField(
-                controller: namaSampahController,
-                decoration: InputDecoration(
-                  labelText: "Nama Sampah",
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value!.isEmpty ? "Nama sampah wajib diisi" : null,
-              ),
-              SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: simpanData,
-                  child: Text("Simpan"),
-                ),
-              ),
-            ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          TextField(
+              controller: nisnC,
+              decoration: const InputDecoration(labelText: "NISN")),
+          TextField(
+              controller: namaC,
+              decoration: const InputDecoration(labelText: "Nama")),
+          TextField(
+              controller: kelasC,
+              decoration: const InputDecoration(labelText: "Kelas")),
+          DropdownButtonFormField<String>(
+            value: kategori,
+            items: kategoriList
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: (val) => setState(() => kategori = val!),
+            decoration: const InputDecoration(labelText: "Kategori"),
           ),
-        ),
+          TextField(
+              controller: namaSampahC,
+              decoration: const InputDecoration(labelText: "Nama Sampah")),
+          const SizedBox(height: 20),
+          ElevatedButton(onPressed: simpanData, child: const Text("Simpan"))
+        ],
       ),
     );
   }

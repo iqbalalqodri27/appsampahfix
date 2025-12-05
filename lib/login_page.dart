@@ -1,88 +1,152 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'register_page.dart';
-import 'inputsampah.dart';
-import 'main.dart';
+import 'main.dart'; // untuk menuju ke MyApp (menu utama)
 
-class LoginPage extends StatefulWidget {
+class LoginRegisterPage extends StatefulWidget {
+  const LoginRegisterPage({Key? key}) : super(key: key);
+
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginRegisterPage> createState() => _LoginRegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool loading = false;
+class _LoginRegisterPageState extends State<LoginRegisterPage> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final namaController = TextEditingController();
 
-  Future<void> _login() async {
+  bool isLogin = true;
+  bool isLoading = false;
+
+  void login() async {
+    setState(() => isLoading = true);
     try {
-      setState(() => loading = true);
-
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      // Redirect ke halaman List Sampah
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MyApp()),
+        MaterialPageRoute(builder: (_) => MyApp()),
+      );
+    } catch (e) {
+      showError(e.toString());
+    }
+    setState(() => isLoading = false);
+  }
+
+  void register() async {
+    setState(() => isLoading = true);
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      ScaffoldMessenger.of(
+      Navigator.pushReplacement(
         context,
-      ).showSnackBar(SnackBar(content: Text("Login Berhasil!")));
-
-      // TODO: Navigate to Dashboard page
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? "Login gagal")));
-    } finally {
-      setState(() => loading = false);
+        MaterialPageRoute(builder: (_) => MyApp()),
+      );
+    } catch (e) {
+      showError(e.toString());
     }
+    setState(() => isLoading = false);
+  }
+
+  void showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Login")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: "Email",
-                border: OutlineInputBorder(),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // ✅ 2 LOGO
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/logo1.jpg', width: 70),
+                  const SizedBox(width: 20),
+                  Image.asset('assets/images/logo2.jpg', width: 70),
+                ],
               ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(),
+
+              const SizedBox(height: 30),
+
+              Text(
+                isLogin ? "LOGIN" : "REGISTER",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            SizedBox(height: 24),
-            loading
-                ? CircularProgressIndicator()
-                : ElevatedButton(onPressed: _login, child: Text("Login")),
-            SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => RegisterPage()),
-                );
-              },
-              child: Text("Belum punya akun? Register"),
-            ),
-          ],
+
+              const SizedBox(height: 25),
+
+              if (!isLogin)
+                TextField(
+                  controller: namaController,
+                  decoration: const InputDecoration(
+                    labelText: "Nama Lengkap",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
+              if (!isLogin) const SizedBox(height: 15),
+
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: "Email",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: "Password",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 25),
+
+              isLoading
+                  ? const CircularProgressIndicator()
+                  : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isLogin ? login : register,
+                        child: Text(isLogin ? "LOGIN" : "REGISTER"),
+                      ),
+                    ),
+
+              const SizedBox(height: 15),
+
+              TextButton(
+                onPressed: () {
+                  setState(() => isLogin = !isLogin);
+                },
+                child: Text(
+                  isLogin
+                      ? "Belum punya akun? Daftar"
+                      : "Sudah punya akun? Login",
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
