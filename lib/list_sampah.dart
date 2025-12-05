@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'detail_sampah_page.dart';
 
 class ListSampahPage extends StatefulWidget {
   final String userId;
@@ -13,64 +14,34 @@ class ListSampahPage extends StatefulWidget {
 class _ListSampahPageState extends State<ListSampahPage> {
   DateTime? selectedDate;
 
-  /// ✅ Ambil data Firestore + filter hari
-  Stream<QuerySnapshot> getSampahStream() {
-    final baseQuery = FirebaseFirestore.instance
-        .collection('sampah')
-        .where('user_id', isEqualTo: widget.userId);
-
-    if (selectedDate == null) {
-      return baseQuery.orderBy('waktu', descending: true).snapshots();
-    } else {
-      DateTime startOfDay = DateTime(
-        selectedDate!.year,
-        selectedDate!.month,
-        selectedDate!.day,
-        0,
-        0,
-        0,
-      );
-
-      DateTime endOfDay = DateTime(
-        selectedDate!.year,
-        selectedDate!.month,
-        selectedDate!.day,
-        23,
-        59,
-        59,
-      );
-
-      return baseQuery
-          .where('waktu', isGreaterThanOrEqualTo: startOfDay)
-          .where('waktu', isLessThanOrEqualTo: endOfDay)
-          .orderBy('waktu', descending: true)
-          .snapshots();
+  // ================== WARNA PER KATEGORI ==================
+  Color getKategoriColor(String kategori) {
+    switch (kategori.toLowerCase()) {
+      case 'plastik':
+        return Colors.blue;
+      case 'kertas':
+        return Colors.orange;
+      case 'logam':
+        return Colors.grey;
+      case 'kaca':
+        return Colors.green;
+      case 'organik':
+        return Colors.brown;
+      default:
+        return Colors.purple;
     }
   }
 
-  /// ✅ PILIH TANGGAL
-  void pilihTanggal() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2022),
-      lastDate: DateTime(2035),
-    );
-
-    if (picked != null) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
+  // ================== FILTER TANGGAL ==================
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // =======================
-        // ✅ FILTER TANGGAL
-        // =======================
+        // ================== FILTER HARI ==================
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -79,14 +50,29 @@ class _ListSampahPageState extends State<ListSampahPage> {
                 child: Text(
                   selectedDate == null
                       ? "Semua Tanggal"
-                      : "Tanggal: ${DateFormat('dd MMM yyyy').format(selectedDate!)}",
-                  style: const TextStyle(fontSize: 16),
+                      : DateFormat('dd MMM yyyy').format(selectedDate!),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.calendar_month),
-                onPressed: pilihTanggal,
+              ElevatedButton.icon(
+                icon: const Icon(Icons.date_range),
+                label: const Text("Filter Hari"),
+                onPressed: () async {
+                  DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2023),
+                    lastDate: DateTime(2035),
+                  );
+
+                  if (picked != null) {
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                  }
+                },
               ),
+              const SizedBox(width: 10),
               if (selectedDate != null)
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -100,52 +86,82 @@ class _ListSampahPageState extends State<ListSampahPage> {
           ),
         ),
 
-        const Divider(),
-
-        // =======================
-        // ✅ LIST DATA SAMPAH
-        // =======================
+        // ================== LIST DATA ==================
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: getSampahStream(),
+            stream: FirebaseFirestore.instance
+                .collection('sampah')
+                .where('user_id', isEqualTo: widget.userId)
+                .orderBy('waktu', descending: true)
+                .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("Belum ada data"));
               }
 
               final docs = snapshot.data!.docs;
 
+              // ================== FILTER HARI ==================
+              final filteredDocs = selectedDate == null
+                  ? docs
+                  : docs.where((doc) {
+                      final waktu = (doc['waktu'] as Timestamp).toDate();
+                      return isSameDay(waktu, selectedDate!);
+                    }).toList();
+
+              if (filteredDocs.isEmpty) {
+                return const Center(child: Text("Belum ada data"));
+              }
+
               return ListView.builder(
-                itemCount: docs.length,
+                itemCount: filteredDocs.length,
                 itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-
-                  String nama = data['nama'] ?? '-';
-                  String kelas = data['kelas'] ?? '-';
-                  String kategori = data['kategori'] ?? '-';
-
-                  Timestamp waktuTimestamp = data['waktu'] ?? Timestamp.now();
-
-                  final waktu = DateFormat('dd MMM yyyy • HH:mm')
-                      .format(waktuTimestamp.toDate());
+                  final data = filteredDocs[index];
+                  final warna = getKategoriColor(data['kategori']);
 
                   return Card(
+                    color: warna.withOpacity(0.15),
                     margin:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
                     child: ListTile(
-                      leading: const Icon(Icons.delete_outline),
-                      title: Text(nama),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailSampahPage(data: data),
+                          ),
+                        );
+                      },
+                      leading: CircleAvatar(
+                        backgroundColor: warna,
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      title: Text(
+                        data['nama_sampah'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Kelas: $kelas"),
-                          Text("Kategori: $kategori"),
-                          Text("Waktu: $waktu"),
+                          Text("Kategori: ${data['kategori']}"),
+                          Text(
+                            "Tanggal: ${DateFormat('dd MMM yyyy – HH:mm').format(data['waktu'].toDate())}",
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () async {
+                          await FirebaseFirestore.instance
+                              .collection('sampah')
+                              .doc(data.id)
+                              .delete();
+                        },
                       ),
                     ),
                   );
