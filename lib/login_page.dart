@@ -1,10 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'main.dart'; // untuk menuju ke MyApp (menu utama)
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'config/api.dart';
 
 class LoginRegisterPage extends StatefulWidget {
-  const LoginRegisterPage({Key? key}) : super(key: key);
-
   @override
   State<LoginRegisterPage> createState() => _LoginRegisterPageState();
 }
@@ -17,134 +18,153 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   bool isLogin = true;
   bool isLoading = false;
 
-  void login() async {
+  // =========================
+  //          LOGIN
+  // =========================
+  Future<void> login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      showError("Email & Password wajib diisi");
+      return;
+    }
+
     setState(() => isLoading = true);
+
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      final response = await http.post(
+        Uri.parse(Api.login),
+        body: {
+          "email": emailController.text.trim(),
+          "password": passwordController.text.trim(),
+        },
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => MyApp()),
-      );
+      var data = json.decode(response.body);
+      print("LOGIN RESPONSE: $data");
+
+      if (response.statusCode == 200 && data["user"] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("user_id", data["user"]["id"].toString());
+
+        Navigator.pushReplacementNamed(
+          context,
+          "/home",
+          arguments: data["user"]["id"].toString(),
+        );
+      } else {
+        showError(data["message"] ?? "Login gagal");
+      }
     } catch (e) {
-      showError(e.toString());
+      showError("Tidak dapat terhubung ke server");
     }
+
     setState(() => isLoading = false);
   }
 
-  void register() async {
+  // =========================
+  //        REGISTER
+  // =========================
+  Future<void> register() async {
+    if (namaController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        passwordController.text.isEmpty) {
+      showError("Semua field wajib diisi");
+      return;
+    }
+
     setState(() => isLoading = true);
+
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      final response = await http.post(
+        Uri.parse(Api.register),
+        body: {
+          "name": namaController.text.trim(),
+          "email": emailController.text.trim(),
+          "password": passwordController.text.trim(),
+        },
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => MyApp()),
-      );
+      var data = json.decode(response.body);
+      print("REGISTER RESPONSE: $data");
+
+      if (response.statusCode == 200 && data["user"] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("user_id", data["user"]["id"].toString());
+
+        Navigator.pushReplacementNamed(
+          context,
+          "/home",
+          arguments: data["user"]["id"].toString(),
+        );
+      } else {
+        showError(data["message"] ?? "Register gagal");
+      }
     } catch (e) {
-      showError(e.toString());
+      showError("Tidak dapat terhubung ke server");
     }
+
     setState(() => isLoading = false);
   }
 
+  // =========================
+  //        ERROR MSG
+  // =========================
   void showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg)),
     );
   }
 
+  // =========================
+  //          UI
+  // =========================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ✅ 2 LOGO
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/logo1.jpg', width: 70),
-                  const SizedBox(width: 20),
-                  Image.asset('assets/images/logo2.jpg', width: 70),
-                ],
-              ),
-
-              const SizedBox(height: 30),
-
-              Text(
-                isLogin ? "LOGIN" : "REGISTER",
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 25),
-
+              Image.asset('assets/images/logo1.png', width: 400),
+              const SizedBox(width: 20),
+              Icon(Icons.person, size: 80, color: Colors.blue),
+              SizedBox(height: 20),
+              Text(isLogin ? "LOGIN" : "REGISTER",
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              SizedBox(height: 20),
               if (!isLogin)
                 TextField(
                   controller: namaController,
-                  decoration: const InputDecoration(
-                    labelText: "Nama Lengkap",
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: InputDecoration(
+                      labelText: "Nama Lengkap", border: OutlineInputBorder()),
                 ),
-
-              if (!isLogin) const SizedBox(height: 15),
-
+              if (!isLogin) SizedBox(height: 15),
               TextField(
                 controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: "Email",
-                  border: OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(
+                    labelText: "Email", border: OutlineInputBorder()),
               ),
-
-              const SizedBox(height: 15),
-
+              SizedBox(height: 15),
               TextField(
                 controller: passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "Password",
-                  border: OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(
+                    labelText: "Password", border: OutlineInputBorder()),
               ),
-
-              const SizedBox(height: 25),
-
+              SizedBox(height: 25),
               isLoading
-                  ? const CircularProgressIndicator()
-                  : SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: isLogin ? login : register,
-                        child: Text(isLogin ? "LOGIN" : "REGISTER"),
-                      ),
+                  ? CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: isLogin ? login : register,
+                      child: Text(isLogin ? "LOGIN" : "REGISTER"),
                     ),
-
-              const SizedBox(height: 15),
-
+              SizedBox(height: 15),
               TextButton(
-                onPressed: () {
-                  setState(() => isLogin = !isLogin);
-                },
-                child: Text(
-                  isLogin
-                      ? "Belum punya akun? Daftar"
-                      : "Sudah punya akun? Login",
-                ),
-              ),
+                onPressed: () => setState(() => isLogin = !isLogin),
+                child: Text(isLogin
+                    ? "Belum punya akun? Daftar"
+                    : "Sudah punya akun? Login"),
+              )
             ],
           ),
         ),

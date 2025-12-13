@@ -1,114 +1,120 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import 'config/api.dart';
+import 'logout.dart';
 
 class DetailSampahPage extends StatelessWidget {
-  final QueryDocumentSnapshot data;
+  final Map data;
 
-  const DetailSampahPage({Key? key, required this.data}) : super(key: key);
-
-  Color getKategoriColor(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'plastik':
-        return Colors.blue;
-      case 'kertas':
-        return Colors.orange;
-      case 'logam':
-        return Colors.grey;
-      case 'kaca':
-        return Colors.green;
-      case 'organik':
-        return Colors.brown;
-      default:
-        return Colors.purple;
-    }
-  }
+  const DetailSampahPage({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
-    final warna = getKategoriColor(data['kategori']);
+    final foto = data['foto'] ?? "";
+    final fotoUrl = foto.isNotEmpty ? "$foto" : null;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Detail Sampah"),
-        backgroundColor: warna,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () {
+              logout(context);
+            },
+          )
+        ],
+        backgroundColor: Color.fromARGB(255, 42, 139, 196),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Card(
-          elevation: 6,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: warna,
-                    child: Icon(
-                      Icons.delete_outline,
-                      size: 45,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                buildItem("Nama Sampah", data['nama_sampah']),
-                buildItem("Kategori", data['kategori']),
-                buildItem("Nama Siswa", data['nama']),
-                buildItem("Kelas", data['kelas']),
-                buildItem("NISN", data['nisn']),
-                buildItem(
-                  "Tanggal",
-                  DateFormat('dd MMM yyyy – HH:mm')
-                      .format(data['waktu'].toDate()),
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.delete),
-                    label: const Text("Hapus Data"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    onPressed: () async {
-                      await FirebaseFirestore.instance
-                          .collection('sampah')
-                          .doc(data.id)
-                          .delete();
-
-                      Navigator.pop(context);
-                    },
-                  ),
-                ),
+                Image.asset('assets/images/logo1.png', width: 200),
+                const SizedBox(width: 30),
+                // Image.asset('assets/images/logo2.jpg', width: 90),
               ],
             ),
-          ),
+            // Image.asset('assets/images/logo2.jpg', width: 90),
+            // ================== FOTO ==================
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: fotoUrl != null
+                    ? Image.network(
+                        fotoUrl,
+                        width: double.infinity,
+                        height: 250,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, st) =>
+                            const Icon(Icons.broken_image, size: 100),
+                      )
+                    : Container(
+                        width: double.infinity,
+                        height: 250,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          size: 80,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ================== TITLE ==================
+            Center(
+              child: Text(
+                data['nama_sampah'] ?? "-",
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // ================== DATA DETAIL ==================
+            buildDetailItem("Kategori", data['kategori']),
+            buildDetailItem("NIS", data['nis']),
+            buildDetailItem("Nama", data['nama']),
+            buildDetailItem("Kelas", data['kelas']),
+            // buildDetailItem("User ID", data['user_id'].toString()),
+            buildDetailItem("Waktu", data['waktu'] ?? "-"),
+          ],
         ),
       ),
     );
   }
 
-  Widget buildItem(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  // ================== WIDGET DETAIL ==================
+  Widget buildDetailItem(String title, dynamic value) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade400),
+      ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            flex: 3,
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 5,
-            child: Text(value),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            value != null ? value.toString() : "-",
+            style: const TextStyle(fontSize: 16),
           ),
         ],
       ),

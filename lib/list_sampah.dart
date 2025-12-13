@@ -1,176 +1,196 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'config/api.dart';
 import 'detail_sampah_page.dart';
+import 'logout.dart';
 
 class ListSampahPage extends StatefulWidget {
   final String userId;
-  const ListSampahPage({Key? key, required this.userId}) : super(key: key);
+  const ListSampahPage({super.key, required this.userId});
 
   @override
   State<ListSampahPage> createState() => _ListSampahPageState();
 }
 
 class _ListSampahPageState extends State<ListSampahPage> {
-  DateTime? selectedDate;
+  List data = [];
+  bool isLoading = false;
+  DateTime selectedDate = DateTime.now();
 
-  // ================== WARNA PER KATEGORI ==================
-  Color getKategoriColor(String kategori) {
-    switch (kategori.toLowerCase()) {
-      case 'plastik':
-        return Colors.blue;
-      case 'kertas':
-        return Colors.orange;
-      case 'logam':
-        return Colors.grey;
-      case 'kaca':
-        return Colors.green;
-      case 'organik':
-        return Colors.brown;
-      default:
-        return Colors.purple;
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
+  Future<void> fetchData() async {
+    setState(() => isLoading = true);
+
+    final tanggal = DateFormat('yyyy-MM-dd').format(selectedDate);
+    final url = "${Api.list}/${widget.userId}?date=$tanggal";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final res = jsonDecode(response.body);
+        setState(() {
+          data = res['data'] ?? [];
+        });
+      } else {
+        debugPrint("Gagal memuat data: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Error fetch: $e");
+    }
+
+    setState(() => isLoading = false);
+  }
+
+  Future<void> pilihTanggal() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now(),
+    );
+
+    if (picked != null) {
+      setState(() => selectedDate = picked);
+      fetchData();
     }
   }
 
-  // ================== FILTER TANGGAL ==================
-  bool isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+  Future<void> deleteData(String id) async {
+    try {
+      final response =
+          await http.delete(Uri.parse("${Api.baseUrl}/sampah/$id"));
+
+      if (response.statusCode == 200) {
+        fetchData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Berhasil dihapus")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error delete: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // ================== FILTER HARI ==================
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("List Sampah"),
+        backgroundColor: const Color.fromARGB(255, 42, 139, 196),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => logout(context),
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          /// LOGO
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  selectedDate == null
-                      ? "Semua Tanggal"
-                      : DateFormat('dd MMM yyyy').format(selectedDate!),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.date_range),
-                label: const Text("Filter Hari"),
-                onPressed: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2023),
-                    lastDate: DateTime(2035),
-                  );
-
-                  if (picked != null) {
-                    setState(() {
-                      selectedDate = picked;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(width: 10),
-              if (selectedDate != null)
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      selectedDate = null;
-                    });
-                  },
-                ),
+              Image.asset('assets/images/logo1.png', width: 200),
+              const SizedBox(width: 20),
+              // Image.asset('assets/images/logo2.jpg', width: 90),
             ],
           ),
-        ),
 
-        // ================== LIST DATA ==================
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('sampah')
-                .where('user_id', isEqualTo: widget.userId)
-                .orderBy('waktu', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          /// FILTER TANGGAL
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.calendar_today),
+              label: Text(
+                DateFormat('dd MMM yyyy').format(selectedDate),
+              ),
+              onPressed: pilihTanggal,
+            ),
+          ),
 
-              final docs = snapshot.data!.docs;
+          /// LIST DATA
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : data.isEmpty
+                    ? const Center(child: Text("Tidak ada data"))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(10),
+                        itemCount: data.length,
+                        itemBuilder: (context, index) {
+                          final item = data[index];
+                          final foto = item['foto'] ?? "";
+                          final fotoUrl = foto.isNotEmpty ? foto : null;
 
-              // ================== FILTER HARI ==================
-              final filteredDocs = selectedDate == null
-                  ? docs
-                  : docs.where((doc) {
-                      final waktu = (doc['waktu'] as Timestamp).toDate();
-                      return isSameDay(waktu, selectedDate!);
-                    }).toList();
-
-              if (filteredDocs.isEmpty) {
-                return const Center(child: Text("Belum ada data"));
-              }
-
-              return ListView.builder(
-                itemCount: filteredDocs.length,
-                itemBuilder: (context, index) {
-                  final data = filteredDocs[index];
-                  final warna = getKategoriColor(data['kategori']);
-
-                  return Card(
-                    color: warna.withOpacity(0.15),
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 4,
-                    child: ListTile(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DetailSampahPage(data: data),
-                          ),
-                        );
-                      },
-                      leading: CircleAvatar(
-                        backgroundColor: warna,
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      title: Text(
-                        data['nama_sampah'],
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Kategori: ${data['kategori']}"),
-                          Text(
-                            "Tanggal: ${DateFormat('dd MMM yyyy – HH:mm').format(data['waktu'].toDate())}",
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          await FirebaseFirestore.instance
-                              .collection('sampah')
-                              .doc(data.id)
-                              .delete();
+                          return Card(
+                            elevation: 3,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: ListTile(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        DetailSampahPage(data: item),
+                                  ),
+                                );
+                              },
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: fotoUrl != null
+                                    ? Image.network(
+                                        fotoUrl,
+                                        width: 70,
+                                        height: 70,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.broken_image),
+                                      )
+                                    : Container(
+                                        width: 70,
+                                        height: 70,
+                                        color: Colors.grey[300],
+                                        child: const Icon(
+                                            Icons.image_not_supported),
+                                      ),
+                              ),
+                              title: Text(
+                                item['nama_sampah'] ?? "-",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item['kategori'] ?? "-"),
+                                  Text(
+                                    item['waktu'] ?? "",
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () =>
+                                    deleteData(item['id'].toString()),
+                              ),
+                            ),
+                          );
                         },
                       ),
-                    ),
-                  );
-                },
-              );
-            },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

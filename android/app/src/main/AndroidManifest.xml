@@ -6,6 +6,7 @@
 
 
    <application
+        android:usesCleartextTraffic="true"
         android:label="Catat Sampahmu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
