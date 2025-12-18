@@ -9,6 +9,7 @@ class Api {
   static const String dashboard = "$baseUrl/dashboard";
   static const String baseUrlStorage =
       "https://sttpu-jakarta.my.id/api/uploads";
+  static const forgotPassword = "$baseUrl/forgot-password";
 }
 
 // class Api {

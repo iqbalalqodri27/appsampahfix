@@ -15,8 +15,46 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   final passwordController = TextEditingController();
   final namaController = TextEditingController();
 
+  final forgotEmailController = TextEditingController();
+  final newPasswordController = TextEditingController();
+
   bool isLogin = true;
   bool isLoading = false;
+
+  Future<void> forgotPassword() async {
+    if (forgotEmailController.text.isEmpty ||
+        newPasswordController.text.isEmpty) {
+      showError("Email & Password baru wajib diisi");
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse(Api.forgotPassword),
+        body: {
+          "email": forgotEmailController.text.trim(),
+          "password": newPasswordController.text.trim(),
+        },
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data["message"])),
+        );
+        Navigator.pop(context); // kembali ke login
+      } else {
+        showError(data["message"] ?? "Gagal reset password");
+      }
+    } catch (e) {
+      showError("Tidak dapat terhubung ke server");
+    }
+
+    setState(() => isLoading = false);
+  }
 
   // =========================
   //          LOGIN
@@ -164,7 +202,47 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 child: Text(isLogin
                     ? "Belum punya akun? Daftar"
                     : "Sudah punya akun? Login"),
-              )
+              ),
+              TextButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text("Lupa Password"),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextField(
+                            controller: forgotEmailController,
+                            decoration: const InputDecoration(
+                              labelText: "Email",
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: newPasswordController,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: "Password Baru",
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Batal"),
+                        ),
+                        ElevatedButton(
+                          onPressed: forgotPassword,
+                          child: const Text("Reset"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: const Text("Lupa Password?"),
+              ),
             ],
           ),
         ),

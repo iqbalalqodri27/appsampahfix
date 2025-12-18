@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'profile_page.dart';
 
 import 'inputsampah.dart';
 import 'list_sampah.dart';
@@ -15,6 +16,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: const Color.fromARGB(255, 42, 139, 196),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color.fromARGB(255, 42, 139, 196),
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white70,
+          type: BottomNavigationBarType.fixed,
+        ),
+      ),
       initialRoute: '/',
       routes: {
         '/': (context) => SplashScreen(),
@@ -94,6 +104,7 @@ class _HomePageState extends State<HomePage> {
       InputSampahPage(userId: widget.userId),
       ListSampahPage(userId: widget.userId),
       DashboardPage(userId: widget.userId),
+      ProfilePage(userId: widget.userId),
     ];
   }
 
@@ -102,13 +113,17 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: _pages[_index],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
+        backgroundColor: const Color.fromARGB(255, 42, 139, 196), // WARNA BAR
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        type: BottomNavigationBarType.fixed,
         onTap: (i) => setState(() => _index = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.add), label: "Input"),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: "List"),
           BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart), label: "Dashboard"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profil"),
         ],
       ),
     );
