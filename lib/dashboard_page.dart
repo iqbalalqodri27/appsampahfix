@@ -38,7 +38,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
         Map<String, int> hasil = {};
         for (var item in jsonData) {
-          hasil[item['kategori']] = item['total'];
+          hasil[item['kategori']] = int.parse(item['total'].toString());
         }
 
         setState(() {

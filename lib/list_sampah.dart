@@ -25,6 +25,37 @@ class _ListSampahPageState extends State<ListSampahPage> {
     fetchData();
   }
 
+  // ================= WARNA CARD BERDASARKAN KATEGORI =================
+  Color getKategoriColor(String kategori) {
+    switch (kategori.toLowerCase()) {
+      case "sampah makanan":
+        return Colors.green.shade100;
+      case "sampah taman":
+        return Colors.lightGreen.shade100;
+      case "kayu":
+        return Colors.brown.shade100;
+      case "kertas karton dan kardus":
+        return Colors.orange.shade100;
+      case "plastik - lembaran":
+        return Colors.blue.shade100;
+      case "plastik - kerasan":
+        return Colors.blue.shade200;
+      case "logam":
+        return Colors.grey.shade300;
+      case "kain dan produk tekstil":
+        return Colors.purple.shade100;
+      case "karet dan kulit":
+        return Colors.deepOrange.shade100;
+      case "kaca":
+        return Colors.cyan.shade100;
+      case "sampah b3":
+        return Colors.red.shade100;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
+  // ================= AMBIL DATA =================
   Future<void> fetchData() async {
     setState(() => isLoading = true);
 
@@ -39,8 +70,6 @@ class _ListSampahPageState extends State<ListSampahPage> {
         setState(() {
           data = res['data'] ?? [];
         });
-      } else {
-        debugPrint("Gagal memuat data: ${response.body}");
       }
     } catch (e) {
       debugPrint("Error fetch: $e");
@@ -49,6 +78,7 @@ class _ListSampahPageState extends State<ListSampahPage> {
     setState(() => isLoading = false);
   }
 
+  // ================= PILIH TANGGAL =================
   Future<void> pilihTanggal() async {
     final picked = await showDatePicker(
       context: context,
@@ -63,6 +93,7 @@ class _ListSampahPageState extends State<ListSampahPage> {
     }
   }
 
+  // ================= DELETE DATA =================
   Future<void> deleteData(String id) async {
     try {
       final response =
@@ -71,7 +102,7 @@ class _ListSampahPageState extends State<ListSampahPage> {
       if (response.statusCode == 200) {
         fetchData();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Berhasil dihapus")),
+          const SnackBar(content: Text("✅ Berhasil dihapus")),
         );
       }
     } catch (e) {
@@ -79,6 +110,7 @@ class _ListSampahPageState extends State<ListSampahPage> {
     }
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,18 +126,15 @@ class _ListSampahPageState extends State<ListSampahPage> {
       ),
       body: Column(
         children: [
-          /// LOGO
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logo1.png', width: 200),
-              const SizedBox(width: 20),
-              // Image.asset('assets/images/logo2.jpg', width: 90),
-            ],
+
+          // ================= LOGO =================
+          Image.asset(
+            'assets/images/logo1.png',
+            width: 200,
           ),
 
-          /// FILTER TANGGAL
+          // ================= FILTER TANGGAL =================
           Padding(
             padding: const EdgeInsets.all(12),
             child: ElevatedButton.icon(
@@ -117,14 +146,14 @@ class _ListSampahPageState extends State<ListSampahPage> {
             ),
           ),
 
-          /// LIST DATA
+          // ================= LIST DATA =================
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : data.isEmpty
                     ? const Center(child: Text("Tidak ada data"))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         itemCount: data.length,
                         itemBuilder: (context, index) {
                           final item = data[index];
@@ -132,7 +161,11 @@ class _ListSampahPageState extends State<ListSampahPage> {
                           final fotoUrl = foto.isNotEmpty ? foto : null;
 
                           return Card(
-                            elevation: 3,
+                            color: getKategoriColor(item['kategori'] ?? ""),
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             margin: const EdgeInsets.only(bottom: 12),
                             child: ListTile(
                               onTap: () {
@@ -172,6 +205,7 @@ class _ListSampahPageState extends State<ListSampahPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(item['kategori'] ?? "-"),
+                                  const SizedBox(height: 4),
                                   Text(
                                     item['waktu'] ?? "",
                                     style: const TextStyle(fontSize: 12),
